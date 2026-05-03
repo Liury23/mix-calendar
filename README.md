@@ -180,10 +180,10 @@ npm run deploy       # 构建 + 部署到 vault
 
 ### 核心参考
 
-- **[Calendar](https://github.com/liamcain/obsidian-calendar-plugin)** by [Liam Cain](https://github.com/liamcain) — Obsidian 日历插件的开创者，提供了周期性笔记索引、月视图交互、hover 预览等核心设计范式
+- **[Calendar](https://github.com/liamcain/obsidian-calendar-plugin)** by [Liam Cain](https://github.com/liamcain) — Obsidian 日历插件的开发者，提供了周期性笔记索引、月视图交互、hover 预览等核心设计范式
 - **[Periodic Notes](https://github.com/liamcain/obsidian-periodic-notes)** by [Liam Cain](https://github.com/liamcain) — 周期性笔记管理的基础设施
 - **[obsidian-daily-notes-interface](https://github.com/liamcain/obsidian-daily-notes-interface)** by [Liam Cain](https://github.com/liamcain) — 日记接口 SDK
-- **[obsidian-lunar-calendar](https://github.com/DevilRoshan/obsidian-lunar-calendar)** by [DevilRoshan](https://github.com/DevilRoshan) — 将农历、节气、节假日系统引入 Obsidian 日历的先驱
+- **[obsidian-lunar-calendar](https://github.com/DevilRoshan/obsidian-lunar-calendar)** by [DevilRoshan](https://github.com/DevilRoshan) — 将农历、节气、节假日系统引入 Obsidian 日历的开发者
 
 ## 许可
 
