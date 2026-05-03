@@ -1,0 +1,10 @@
+{
+  "id": "mix-calendar",
+  "name": "Mix Calendar",
+  "version": "1.0.0",
+  "minAppVersion": "1.5.12",
+  "description": "融合公历+农历日历，支持日/周/月/季/年五级笔记，替代 Calendar 和 Chinese Calendar 插件",
+  "author": "Mix Calendar Contributors",
+  "authorUrl": "https://github.com/Liury23",
+  "isDesktopOnly": false
+}
