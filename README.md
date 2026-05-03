@@ -172,12 +172,18 @@ npm run deploy       # 构建 + 部署到 vault
 
 ## 致谢
 
-本插件融合并借鉴了以下优秀作品的设计思路和部分实现：
+本插件融合并借鉴了以下优秀作品的设计思路和部分实现，特此致谢。
 
-- **[Calendar](https://github.com/liamcain/calendar)** by [Liam Cain](https://github.com/liamcain) — Obsidian 日历插件的开创者，提供了周期性笔记索引、月视图交互、hover 预览等核心设计范式
-- **[Chinese Calendar](https://github.com/devil-tamachan/obsidian-chinese-calendar)** by [DevilRoshan](https://github.com/devil-tamachan) — 将农历、节气、节假日系统引入 Obsidian 日历的先驱
+### 灵感来源
 
-特此致谢。
+- **[dust-obsidian-calendar](https://github.com/a-nano-dust/dust-obsidian-calendar)** by [a-nano-dust](https://github.com/a-nano-dust) — 特别感谢其灵感启发
+
+### 核心参考
+
+- **[Calendar](https://github.com/liamcain/obsidian-calendar-plugin)** by [Liam Cain](https://github.com/liamcain) — Obsidian 日历插件的开创者，提供了周期性笔记索引、月视图交互、hover 预览等核心设计范式
+- **[Periodic Notes](https://github.com/liamcain/obsidian-periodic-notes)** by [Liam Cain](https://github.com/liamcain) — 周期性笔记管理的基础设施
+- **[obsidian-daily-notes-interface](https://github.com/liamcain/obsidian-daily-notes-interface)** by [Liam Cain](https://github.com/liamcain) — 日记接口 SDK
+- **[obsidian-lunar-calendar](https://github.com/DevilRoshan/obsidian-lunar-calendar)** by [DevilRoshan](https://github.com/DevilRoshan) — 将农历、节气、节假日系统引入 Obsidian 日历的先驱
 
 ## 许可
 
