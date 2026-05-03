@@ -170,6 +170,15 @@ npm run deploy       # 构建 + 部署到 vault
 
 技术栈: TypeScript + Svelte 4 + esbuild + lunar-typescript + vitest
 
+## 致谢
+
+本插件融合并借鉴了以下优秀作品的设计思路和部分实现：
+
+- **[Calendar](https://github.com/liamcain/calendar)** by [Liam Cain](https://github.com/liamcain) — Obsidian 日历插件的开创者，提供了周期性笔记索引、月视图交互、hover 预览等核心设计范式
+- **[Chinese Calendar](https://github.com/devil-tamachan/obsidian-chinese-calendar)** by [DevilRoshan](https://github.com/devil-tamachan) — 将农历、节气、节假日系统引入 Obsidian 日历的先驱
+
+特此致谢。
+
 ## 许可
 
 MIT
