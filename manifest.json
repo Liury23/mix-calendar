@@ -1,8 +1,8 @@
 {
   "id": "mix-calendar",
   "name": "Mix Calendar",
-  "version": "1.0.1",
-  "minAppVersion": "1.5.12",
+  "version": "1.1.0",
+  "minAppVersion": "1.7.2",
   "description": "A calendar widget combining Gregorian and Lunar calendars with 5 levels of periodic notes, task tracking, and holiday support.",
   "author": "liury23",
   "authorUrl": "https://github.com/Liury23",

@@ -1,14 +1,16 @@
 {
   "name": "mix-calendar",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Obsidian Mix Calendar plugin — Gregorian + Lunar calendar with 5-granularity periodic notes",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
-    "build": "node esbuild.config.mjs production",
+    "build": "tsc --noEmit && node esbuild.config.mjs production",
     "deploy": "node esbuild.config.mjs production && deploy.bat",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "obsidian",
@@ -21,10 +23,14 @@
     "@types/node": "^20.11.0",
     "esbuild": "^0.20.0",
     "esbuild-svelte": "^0.8.1",
+    "eslint": "^9.39.5",
+    "eslint-plugin-obsidianmd": "^0.4.2",
+    "globals": "^17.12.0",
     "obsidian": "latest",
     "svelte": "^4.2.0",
     "svelte-preprocess": "^5.1.0",
     "typescript": "^5.3.0",
+    "typescript-eslint": "^8.69.0",
     "vitest": "^4.1.5"
   },
   "dependencies": {
