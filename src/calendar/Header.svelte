@@ -1,8 +1,9 @@
 <script lang="ts">
   import { currentDate, viewMode, settings, i18n, uiLocale } from "./stores";
   import { getGanZhiYearLabel } from "../lunar/converter";
+  import { moment } from "obsidian";
 
-  let internalDate = $currentDate ? $currentDate.clone() : window.moment();
+  let internalDate = $currentDate ? $currentDate.clone() : moment();
 
   $: {
     if ($currentDate) {
@@ -47,7 +48,7 @@
   }
 
   function goToday() {
-    $currentDate = window.moment();
+    $currentDate = moment();
   }
 
   function setViewMode(mode: "month" | "year") {

@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type MixCalendarPlugin from "./main";
 import { GRANULARITIES } from "./constants";
-import type { Granularity, PeriodicNoteSettings, WeekStart } from "./types";
+import type { Granularity, WeekStart } from "./types";
 
 const GRANULARITY_LABELS: Record<Granularity, string> = {
   daily: "日记 (Daily)",
@@ -26,8 +26,6 @@ export class MixCalendarSettingTab extends PluginSettingTab {
     // ============================
     // General Settings
     // ============================
-    containerEl.createEl("h3", { text: "通用设置 (General)" });
-
     new Setting(containerEl)
       .setName("每周起始日 (Week Start)")
       .setDesc("选择日历每周的第一天")
@@ -91,7 +89,7 @@ export class MixCalendarSettingTab extends PluginSettingTab {
     // ============================
     // Appearance Settings
     // ============================
-    containerEl.createEl("h3", { text: "显示设置 (Appearance)" });
+    new Setting(containerEl).setName("显示设置 (Appearance)").setHeading();
 
     new Setting(containerEl)
       .setName("农历信息 (Show Lunar Info)")
@@ -209,9 +207,9 @@ export class MixCalendarSettingTab extends PluginSettingTab {
     // ============================
     // Custom Holiday Overrides
     // ============================
-    containerEl.createEl("h3", { text: "自定义节假日 (Custom Holidays)" });
+    new Setting(containerEl).setName("自定义节假日 (Custom Holidays)").setHeading();
 
-    const descDiv = containerEl.createEl("div");
+    const descDiv = containerEl.createDiv();
     descDiv.createEl("p", {
       text: "此处覆盖法定节假日库的结果。格式：YYYY-MM-DD:休 或 YYYY-MM-DD:班，每行一条。",
     });
@@ -225,23 +223,20 @@ export class MixCalendarSettingTab extends PluginSettingTab {
       .sort()
       .join("\n");
 
-    const textareaDiv = containerEl.createEl("div");
+    const textareaDiv = containerEl.createDiv();
     const textareaEl = textareaDiv.createEl("textarea", {
+      cls: "mix-calendar-holiday-textarea",
       attr: {
         rows: "6",
         placeholder: "# 公司放假\n2026-05-05:休\n# 公司调休\n2026-10-10:班",
       },
     });
-    textareaEl.style.width = "100%";
-    textareaEl.style.fontFamily = "var(--font-monospace)";
-    textareaEl.style.fontSize = "12px";
     textareaEl.value = lines;
 
     const saveBtn = containerEl.createEl("button", {
       text: "保存自定义节假日",
-      cls: "mod-cta",
+      cls: "mod-cta mix-calendar-holiday-save",
     });
-    saveBtn.style.marginTop = "8px";
     saveBtn.onclick = async () => {
       const newOverrides: Record<string, "holiday" | "workday"> = {};
       const raw = textareaEl.value.trim();
@@ -268,7 +263,7 @@ export class MixCalendarSettingTab extends PluginSettingTab {
     // ============================
     // Note Settings (5 granularities)
     // ============================
-    containerEl.createEl("h3", { text: "笔记设置 (Note Settings)" });
+    new Setting(containerEl).setName("周期笔记 (Periodic Notes)").setHeading();
 
     for (const gran of GRANULARITIES) {
       const label = GRANULARITY_LABELS[gran];
@@ -283,7 +278,7 @@ export class MixCalendarSettingTab extends PluginSettingTab {
   ): void {
     const settings = this.plugin.settings[gran];
 
-    containerEl.createEl("h4", { text: label });
+    new Setting(containerEl).setName(label).setHeading();
 
     new Setting(containerEl)
       .setName("启用 (Enabled)")

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { Moment } from "moment";
+import type { Moment } from "../types";
 
 // Mock the obsidian module before importing anything that depends on it
 vi.mock("obsidian", () => {

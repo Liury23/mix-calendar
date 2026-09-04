@@ -1,4 +1,4 @@
-import type { LunarInfo } from "../../types";
+import type { LunarInfo } from "../types";
 
 /**
  * Display priority: festival > solar term > lunar month (1st or 15th) > lunar day.

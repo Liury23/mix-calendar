@@ -3,9 +3,6 @@ import type { IMixCalendarSettings } from "./types";
 /** Plugin view type identifier */
 export const VIEW_TYPE_MIX_CALENDAR = "mix-calendar-view";
 
-/** CSS class prefixes */
-export const CSS_CLASS = "mix-calendar";
-
 /** Supported note granularities in display order */
 export const GRANULARITIES = ["daily", "weekly", "monthly", "quarterly", "yearly"] as const;
 

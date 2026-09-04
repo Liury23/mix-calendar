@@ -1,4 +1,4 @@
-import { Plugin, type WorkspaceLeaf, TFile } from "obsidian";
+import { Plugin, moment, type WorkspaceLeaf, TFile, TFolder } from "obsidian";
 import { get } from "svelte/store";
 import { CalendarView } from "./calendar/CalendarView";
 import { MixCalendarSettingTab } from "./settings";
@@ -6,18 +6,40 @@ import { VIEW_TYPE_MIX_CALENDAR, DEFAULT_SETTINGS, GRANULARITIES, TASK_REGEX, CO
 import {
   settings,
   currentDate,
-  activeFile,
   viewMode,
   noteStores,
 } from "./calendar/stores";
-import type { IMixCalendarSettings, Granularity, TaskStats } from "./types";
+import type { IMixCalendarSettings, Granularity, TaskStats, WeekStart } from "./types";
+
+/** Safe readers for foreign plugin option objects (typed as unknown). */
+function readString(opts: Record<string, unknown>, key: string): string | undefined {
+  const v = opts[key];
+  return typeof v === "string" ? v : undefined;
+}
+function readBool(opts: Record<string, unknown>, key: string): boolean | undefined {
+  const v = opts[key];
+  return typeof v === "boolean" ? v : undefined;
+}
+
+const WEEK_START_VALUES: readonly string[] = [
+  "locale", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
+];
+
+interface InternalPluginsApi {
+  getPluginById?: (id: string) => { instance?: { options?: Record<string, unknown> } } | null;
+}
+
+interface CommunityPluginsApi {
+  getPlugin?: (id: string) => {
+    options?: Record<string, unknown>;
+    settings?: { appearance?: { pastTimeTransparent?: unknown } };
+  } | null;
+}
 
 export default class MixCalendarPlugin extends Plugin {
   settings!: IMixCalendarSettings;
 
   async onload(): Promise<void> {
-    console.log("[Mix Calendar] Loading plugin...");
-
     // 1. Load settings (or use defaults for first run)
     await this.loadSettings();
 
@@ -32,13 +54,13 @@ export default class MixCalendarPlugin extends Plugin {
 
     // 4. Add ribbon icon
     this.addRibbonIcon("calendar-days", "Open Mix Calendar", () => {
-      this.activateView();
+      void this.activateView();
     });
 
     // 5. Add command to open calendar
     this.addCommand({
-      id: "open-mix-calendar",
-      name: "Open Mix Calendar",
+      id: "open",
+      name: "Open calendar",
       callback: () => this.activateView(),
     });
 
@@ -53,7 +75,6 @@ export default class MixCalendarPlugin extends Plugin {
     this.registerEvent(
       this.app.workspace.on("file-open", (file: TFile | null) => {
         if (file) {
-          activeFile.set(file);
           // Update currentDate to match the opened daily note
           this.trySyncDateFromFile(file);
         }
@@ -64,7 +85,7 @@ export default class MixCalendarPlugin extends Plugin {
     this.registerEvent(
       this.app.vault.on("create", (file) => {
         if (file instanceof TFile && file.extension === "md") {
-          this.incrementalAddFile(file);
+          void this.incrementalAddFile(file);
         }
       })
     );
@@ -79,7 +100,7 @@ export default class MixCalendarPlugin extends Plugin {
       this.app.vault.on("rename", (file, oldPath) => {
         if (file instanceof TFile && file.extension === "md") {
           this.incrementalRemovePath(oldPath);
-          this.incrementalAddFile(file);
+          void this.incrementalAddFile(file);
         }
       })
     );
@@ -104,18 +125,15 @@ export default class MixCalendarPlugin extends Plugin {
     this.app.workspace.onLayoutReady(() => {
       this.reindexAllWhenReady();
     });
-
-    console.log("[Mix Calendar] Plugin loaded successfully");
   }
 
   onunload(): void {
-    console.log("[Mix Calendar] Unloading plugin...");
     if (this.reindexDebounceTimer) {
-      clearTimeout(this.reindexDebounceTimer);
+      window.clearTimeout(this.reindexDebounceTimer);
       this.reindexDebounceTimer = null;
     }
     if (this.backlinkDebounceTimer) {
-      clearTimeout(this.backlinkDebounceTimer);
+      window.clearTimeout(this.backlinkDebounceTimer);
       this.backlinkDebounceTimer = null;
     }
     // Svelte components are destroyed via CalendarView.onClose()
@@ -126,7 +144,7 @@ export default class MixCalendarPlugin extends Plugin {
   // ============================================================
 
   async loadSettings(): Promise<void> {
-    const data = await this.loadData();
+    const data = (await this.loadData()) as Partial<IMixCalendarSettings> | null;
     if (data && Object.keys(data).length > 0) {
       // Merge with defaults to handle new fields
       this.settings = { ...DEFAULT_SETTINGS, ...data };
@@ -135,7 +153,7 @@ export default class MixCalendarPlugin extends Plugin {
         this.settings[gran] = { ...DEFAULT_SETTINGS[gran], ...(data[gran] || {}) };
       }
       // Migrate stale template paths (06-Templates → 04-Resources/Templates)
-      this.migrateTemplatePaths();
+      await this.migrateTemplatePaths();
     } else {
       this.settings = { ...DEFAULT_SETTINGS };
       // First run: auto-migrate from Core Daily Notes and Calendar plugin
@@ -151,58 +169,64 @@ export default class MixCalendarPlugin extends Plugin {
   }
 
   async migrateSettings(): Promise<void> {
-    console.log("[Mix Calendar] First run detected, attempting settings migration...");
-
     try {
       // 1. Migrate from Core Daily Notes
-      const dailyNotesPlugin = (this.app as any).internalPlugins
-        ?.getPluginById?.("daily-notes");
-      if (dailyNotesPlugin?.instance?.options) {
-        const opts = dailyNotesPlugin.instance.options;
-        if (opts.format) this.settings.daily.format = opts.format;
-        if (opts.folder) this.settings.daily.folder = opts.folder;
-        if (opts.template) this.settings.daily.template = opts.template;
-        console.log("[Mix Calendar] Migrated daily note settings from Core Daily Notes");
+      const internalPlugins = (this.app as unknown as { internalPlugins?: InternalPluginsApi })
+        .internalPlugins;
+      const dailyNotesPlugin = internalPlugins?.getPluginById?.("daily-notes");
+      const dailyOpts = dailyNotesPlugin?.instance?.options;
+      if (dailyOpts) {
+        const format = readString(dailyOpts, "format");
+        const folder = readString(dailyOpts, "folder");
+        const template = readString(dailyOpts, "template");
+        if (format) this.settings.daily.format = format;
+        if (folder) this.settings.daily.folder = folder;
+        if (template) this.settings.daily.template = template;
       }
 
       // 2. Migrate from Calendar plugin (liamcain)
-      const calendarPlugin = (this.app as any).plugins?.getPlugin?.("calendar");
-      if (calendarPlugin?.options) {
-        const opts = calendarPlugin.options;
-        if (opts.weekStart) this.settings.weekStart = opts.weekStart;
-        if (opts.localeOverride) this.settings.localeOverride = opts.localeOverride;
-        if (opts.shouldConfirmBeforeCreate !== undefined) {
-          this.settings.shouldConfirmBeforeCreate = opts.shouldConfirmBeforeCreate;
+      const communityPlugins = (this.app as unknown as { plugins?: CommunityPluginsApi }).plugins;
+      const calendarPlugin = communityPlugins?.getPlugin?.("calendar");
+      const calOpts = calendarPlugin?.options;
+      if (calOpts) {
+        const weekStart = readString(calOpts, "weekStart");
+        const localeOverride = readString(calOpts, "localeOverride");
+        const shouldConfirm = readBool(calOpts, "shouldConfirmBeforeCreate");
+        const showWeeklyNote = readBool(calOpts, "showWeeklyNote");
+        const weeklyNoteFormat = readString(calOpts, "weeklyNoteFormat");
+        const weeklyNoteFolder = readString(calOpts, "weeklyNoteFolder");
+        const weeklyNoteTemplate = readString(calOpts, "weeklyNoteTemplate");
+        if (weekStart && WEEK_START_VALUES.includes(weekStart)) {
+          this.settings.weekStart = weekStart as WeekStart;
+        }
+        if (localeOverride) this.settings.localeOverride = localeOverride;
+        if (shouldConfirm !== undefined) {
+          this.settings.shouldConfirmBeforeCreate = shouldConfirm;
         }
         // Weekly settings
-        if (opts.showWeeklyNote !== undefined) {
-          this.settings.weekly.enabled = opts.showWeeklyNote;
+        if (showWeeklyNote !== undefined) {
+          this.settings.weekly.enabled = showWeeklyNote;
         }
-        if (opts.weeklyNoteFormat) this.settings.weekly.format = opts.weeklyNoteFormat;
-        if (opts.weeklyNoteFolder) this.settings.weekly.folder = opts.weeklyNoteFolder;
-        if (opts.weeklyNoteTemplate) this.settings.weekly.template = opts.weeklyNoteTemplate;
-        console.log("[Mix Calendar] Migrated settings from Calendar plugin");
+        if (weeklyNoteFormat) this.settings.weekly.format = weeklyNoteFormat;
+        if (weeklyNoteFolder) this.settings.weekly.folder = weeklyNoteFolder;
+        if (weeklyNoteTemplate) this.settings.weekly.template = weeklyNoteTemplate;
       }
 
       // 3. Migrate from Chinese Calendar plugin
-      const chinesePlugin = (this.app as any).plugins?.getPlugin?.("chinese-calendar");
-      if (chinesePlugin?.settings) {
-        const opts = chinesePlugin.settings;
-        if (opts.appearance?.pastTimeTransparent !== undefined) {
-          this.settings.pastTimeTransparent = opts.appearance.pastTimeTransparent;
-        }
-        console.log("[Mix Calendar] Migrated appearance settings from Chinese Calendar plugin");
+      const chinesePlugin = communityPlugins?.getPlugin?.("chinese-calendar");
+      const pastTransparent = chinesePlugin?.settings?.appearance?.pastTimeTransparent;
+      if (typeof pastTransparent === "boolean") {
+        this.settings.pastTimeTransparent = pastTransparent;
       }
 
       await this.saveSettings();
-      console.log("[Mix Calendar] Settings migration complete");
     } catch (err) {
       console.warn("[Mix Calendar] Settings migration failed (non-critical):", err);
     }
   }
 
   /** Auto-update template paths from old 06-Templates/ to 04-Resources/Templates/ */
-  private migrateTemplatePaths(): void {
+  private async migrateTemplatePaths(): Promise<void> {
     let changed = false;
     for (const gran of GRANULARITIES) {
       const tpl = this.settings[gran].template;
@@ -212,8 +236,7 @@ export default class MixCalendarPlugin extends Plugin {
       }
     }
     if (changed) {
-      console.log("[Mix Calendar] Migrated template paths to 04-Resources/Templates/");
-      this.saveSettings();
+      await this.saveSettings();
     }
   }
 
@@ -228,18 +251,19 @@ export default class MixCalendarPlugin extends Plugin {
     let leaf = workspace.getLeavesOfType(VIEW_TYPE_MIX_CALENDAR)[0];
     if (!leaf) {
       // Open in right sidebar
-      leaf = workspace.getRightLeaf(false);
-      if (leaf) {
-        await leaf.setViewState({
+      const rightLeaf = workspace.getRightLeaf(false);
+      if (rightLeaf) {
+        await rightLeaf.setViewState({
           type: VIEW_TYPE_MIX_CALENDAR,
           active: true,
         });
+        leaf = rightLeaf;
       }
     }
 
     // Reveal the leaf
     if (leaf) {
-      workspace.revealLeaf(leaf);
+      await workspace.revealLeaf(leaf);
     }
   }
 
@@ -252,20 +276,20 @@ export default class MixCalendarPlugin extends Plugin {
     for (const gran of GRANULARITIES) {
       const gs = this.settings[gran];
       if (!gs.enabled) continue;
-      const parsed = window.moment(file.basename, this.basenameFormat(gs.format), true);
+      const parsed = moment(file.basename, this.basenameFormat(gs.format), true);
       if (parsed.isValid()) {
         currentDate.set(parsed);
         // Switch to month view if currently in year view
         if (get(viewMode) === "year") {
           viewMode.set("month");
         }
-        this.activateView();
+        void this.activateView();
         return;
       }
     }
 
     // If not a periodic note, just reveal the calendar
-    this.activateView();
+    void this.activateView();
   }
 
   // ============================================================
@@ -276,7 +300,7 @@ export default class MixCalendarPlugin extends Plugin {
     if (!file) return;
 
     const format = this.basenameFormat(this.settings.daily.format);
-    const parsed = window.moment(file.basename, format, true);
+    const parsed = moment(file.basename, format, true);
     if (parsed.isValid()) {
       currentDate.set(parsed);
     }
@@ -286,14 +310,14 @@ export default class MixCalendarPlugin extends Plugin {
   // Note indexing — full scan (only on load / settings change)
   // ============================================================
 
-  private reindexDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private reindexDebounceTimer: number | null = null;
 
   private reindexAllWhenReady(): void {
     if (this.reindexDebounceTimer) {
-      clearTimeout(this.reindexDebounceTimer);
+      window.clearTimeout(this.reindexDebounceTimer);
     }
-    this.reindexDebounceTimer = setTimeout(() => {
-      this.reindexAll();
+    this.reindexDebounceTimer = window.setTimeout(() => {
+      void this.reindexAll();
     }, 300);
   }
 
@@ -321,7 +345,7 @@ export default class MixCalendarPlugin extends Plugin {
 
       // Get the folder
       const folderObj = this.app.vault.getAbstractFileByPath(folder);
-      if (!folderObj) {
+      if (!(folderObj instanceof TFolder)) {
         store.set({ notes: {}, taskStats: {}, linkCounts: {}, lastIndexed: Date.now() });
         return;
       }
@@ -331,17 +355,16 @@ export default class MixCalendarPlugin extends Plugin {
 
       // Recursively collect all .md files
       const basenameFmt = this.basenameFormat(format);
-      const collectFiles = (f: any) => {
-        if (f instanceof TFile && f.extension === "md") {
-          const parsed = window.moment(f.basename, basenameFmt, true);
-          if (parsed.isValid()) {
-            const uid = this.fileToUID(f.basename, gran, format);
-            notes[uid] = f;
-            matchingFiles.push({ file: f, uid });
-          }
-        }
-        if (f.children) {
-          for (const child of f.children) {
+      const collectFiles = (f: TFolder) => {
+        for (const child of f.children) {
+          if (child instanceof TFile && child.extension === "md") {
+            const parsed = moment(child.basename, basenameFmt, true);
+            if (parsed.isValid()) {
+              const uid = this.fileToUID(child.basename, gran, format);
+              notes[uid] = child;
+              matchingFiles.push({ file: child, uid });
+            }
+          } else if (child instanceof TFolder) {
             collectFiles(child);
           }
         }
@@ -356,13 +379,6 @@ export default class MixCalendarPlugin extends Plugin {
       const linkCounts = (gran === "daily" && this.settings.showLinkCount)
         ? this.computeLinkCounts(matchingFiles)
         : {};
-
-      console.log(
-        `[Mix Calendar] Indexed ${gran}: ` +
-        `${Object.keys(notes).length} notes, ` +
-        `${Object.keys(taskStats).length} with tasks, ` +
-        `${Object.keys(linkCounts).length} with backlinks`
-      );
 
       store.set({ notes, taskStats, linkCounts, lastIndexed: Date.now() });
     } catch (err) {
@@ -388,7 +404,7 @@ export default class MixCalendarPlugin extends Plugin {
 
   /** Convert a filename (basename) to a dateUID for the given granularity. */
   private fileToUID(basename: string, gran: Granularity, format: string): string {
-    const parsed = window.moment(basename, this.basenameFormat(format), true);
+    const parsed = moment(basename, this.basenameFormat(format), true);
     switch (gran) {
       case "daily":     return parsed.format("YYYY-MM-DD");
       case "weekly":    return parsed.format("GGGG-[W]WW");
@@ -411,7 +427,7 @@ export default class MixCalendarPlugin extends Plugin {
       const folder = gs.folder.replace(/\/$/, "");
       if (folder && !file.path.startsWith(folder + "/") && file.path !== folder) continue;
 
-      const parsed = window.moment(file.basename, this.basenameFormat(gs.format), true);
+      const parsed = moment(file.basename, this.basenameFormat(gs.format), true);
       if (!parsed.isValid()) continue;
 
       return { gran, uid: this.fileToUID(file.basename, gran, gs.format) };
@@ -475,8 +491,7 @@ export default class MixCalendarPlugin extends Plugin {
     }
 
     // resolvedLinks: { sourcePath: { targetPath: count } }
-    const resolvedLinks = (this.app.metadataCache as any).resolvedLinks as
-      Record<string, Record<string, number>> | undefined;
+    const resolvedLinks = this.app.metadataCache.resolvedLinks;
 
     if (resolvedLinks) {
       for (const linksObj of Object.values(resolvedLinks)) {
@@ -489,11 +504,6 @@ export default class MixCalendarPlugin extends Plugin {
       }
     }
 
-    console.log(
-      `[Mix Calendar] Computed link counts: ` +
-      `${Object.keys(linkCounts).length} daily notes have backlinks ` +
-      `(resolvedLinks available: ${!!resolvedLinks})`
-    );
     return linkCounts;
   }
 
@@ -591,13 +601,13 @@ export default class MixCalendarPlugin extends Plugin {
   // Debounced backlink refresh (daily only, lightweight)
   // ============================================================
 
-  private backlinkDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private backlinkDebounceTimer: number | null = null;
 
   /** Schedule a daily-only backlink refresh after a short debounce. */
   private scheduleBacklinkRefresh(): void {
     if (!this.settings.showLinkCount) return;
-    if (this.backlinkDebounceTimer) clearTimeout(this.backlinkDebounceTimer);
-    this.backlinkDebounceTimer = setTimeout(() => {
+    if (this.backlinkDebounceTimer) window.clearTimeout(this.backlinkDebounceTimer);
+    this.backlinkDebounceTimer = window.setTimeout(() => {
       this.refreshDailyBacklinks();
     }, 500);
   }
@@ -630,7 +640,7 @@ export default class MixCalendarPlugin extends Plugin {
         continue;
       }
 
-      const parsed = window.moment(file.basename, this.basenameFormat(granSettings.format), true);
+      const parsed = moment(file.basename, this.basenameFormat(granSettings.format), true);
       if (!parsed.isValid()) continue;
 
       const uid = this.fileToUID(file.basename, gran, granSettings.format);

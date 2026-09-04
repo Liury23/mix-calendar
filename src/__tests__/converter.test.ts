@@ -70,7 +70,6 @@ describe("getLunarInfo", () => {
 
   it("极小年份（1900-01-01）返回 null", () => {
     // Before 1900, lunar-typescript may fail for some dates
-    const info = getLunarInfo(1899, 12, 31);
     // May or may not be null depending on library — just verify no crash
     expect(() => getLunarInfo(1899, 12, 31)).not.toThrow();
   });

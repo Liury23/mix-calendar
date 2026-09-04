@@ -4,6 +4,7 @@
   import { createPeriodicNote, getNotePath } from "../notes/creator";
   import { ConfirmCreateModal } from "../ui/ConfirmModal";
   import { get } from "svelte/store";
+  import { MarkdownView } from "obsidian";
   import { dailyNotes, selectedDateUID } from "./stores";
 
   export let data: DayCellData;
@@ -65,7 +66,7 @@
     const note = get(dailyNotes).notes[data.dateUID];
     const notePath = note?.path;
     // Trigger Obsidian's built-in hover-link preview popup
-    (plugin.app.workspace as any).trigger(
+    plugin.app.workspace.trigger(
       "link-hover",
       {},
       e.currentTarget,
@@ -87,7 +88,7 @@
     // Check if note already exists (via store index)
     const existing = get(dailyNotes).notes[dateUID];
     if (existing) {
-      plugin.app.workspace.getLeaf(useNewLeaf ? "split" : false).openFile(existing);
+      await plugin.app.workspace.getLeaf(useNewLeaf ? "split" : false).openFile(existing);
       return;
     }
 
@@ -103,24 +104,23 @@
         plugin.settings.holidayOverrides
       );
       if (file) {
-        plugin.app.workspace.getLeaf(useNewLeaf ? "split" : false).openFile(file);
+        await plugin.app.workspace.getLeaf(useNewLeaf ? "split" : false).openFile(file);
       }
     };
 
     if (plugin.settings.shouldConfirmBeforeCreate) {
       new ConfirmCreateModal(plugin.app, notePath, "日记", doCreate).open();
     } else {
-      doCreate();
+      await doCreate();
     }
   }
 
-  function handleContextMenu(e: MouseEvent) {
+  async function handleContextMenu(e: MouseEvent) {
     const existing = dailyNotes.get(data.dateUID);
     if (existing) {
       e.preventDefault();
-      import("../ui/fileMenu").then(({ showNoteContextMenu }) => {
-        showNoteContextMenu(e, plugin.app, existing, "daily", data.dateUID);
-      });
+      const { showNoteContextMenu } = await import("../ui/fileMenu");
+      showNoteContextMenu(e, plugin.app, existing, "daily");
     }
   }
 
@@ -138,14 +138,14 @@
     await leaf.openFile(file);
 
     // Jump to first incomplete checkbox
-    const view = leaf.view as any;
-    if (view?.editor) {
+    if (leaf.view instanceof MarkdownView) {
+      const editor = leaf.view.editor;
       const content = await plugin.app.vault.cachedRead(file);
       const lines = content.split("\n");
       const lineIndex = lines.findIndex((l: string) => /- \[ \]\s*\S/.test(l));
       if (lineIndex >= 0) {
-        view.editor.setCursor({ line: lineIndex, ch: 0 });
-        view.editor.scrollIntoView(
+        editor.setCursor({ line: lineIndex, ch: 0 });
+        editor.scrollIntoView(
           { from: { line: lineIndex, ch: 0 }, to: { line: lineIndex, ch: 0 } },
           true
         );

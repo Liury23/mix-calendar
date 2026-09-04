@@ -1,7 +1,6 @@
 <script lang="ts">
-  import type { Moment } from "moment";
   import type MixCalendarPlugin from "../main";
-  import type { TaskStats } from "../types";
+  import type { TaskStats, Moment } from "../types";
   import { createPeriodicNote, getNotePath } from "../notes/creator";
   import { ConfirmCreateModal } from "../ui/ConfirmModal";
   import { weeklyNotes } from "./stores";
@@ -29,7 +28,7 @@
     if (!isModPressed(e)) return;
     if (!weekDate) return;
     const note = get(weeklyNotes).notes[weekUID];
-    (plugin.app.workspace as any).trigger(
+    plugin.app.workspace.trigger(
       "link-hover",
       {},
       e.currentTarget,
@@ -65,7 +64,7 @@
     // Check if weekly note already exists
     const existing = get(weeklyNotes).notes[weekUID];
     if (existing) {
-      plugin.app.workspace.getLeaf(useNewLeaf ? "split" : false).openFile(existing);
+      await plugin.app.workspace.getLeaf(useNewLeaf ? "split" : false).openFile(existing);
       return;
     }
 
@@ -80,14 +79,14 @@
         plugin.settings.holidayOverrides
       );
       if (file) {
-        plugin.app.workspace.getLeaf(useNewLeaf ? "split" : false).openFile(file);
+        await plugin.app.workspace.getLeaf(useNewLeaf ? "split" : false).openFile(file);
       }
     };
 
     if (plugin.settings.shouldConfirmBeforeCreate) {
       new ConfirmCreateModal(plugin.app, notePath, "周记", doCreate).open();
     } else {
-      doCreate();
+      await doCreate();
     }
   }
 </script>

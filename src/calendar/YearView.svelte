@@ -1,14 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import type { Moment } from "moment";
-  import type { TFile } from "obsidian";
+  import { moment, type TFile } from "obsidian";
   import type MixCalendarPlugin from "../main";
   import { currentDate, viewMode, settings, monthlyNotes, quarterlyNotes, dailyNotes, yearlyNotes, i18n } from "./stores";
   import { createPeriodicNote, getNotePath } from "../notes/creator";
   import { ConfirmCreateModal } from "../ui/ConfirmModal";
   import { showNoteContextMenu } from "../ui/fileMenu";
   import { getLunarInfo } from "../lunar/converter";
-  import type { TaskStats, IMixCalendarSettings } from "../types";
+  import type { TaskStats, IMixCalendarSettings, Moment } from "../types";
 
   export let plugin: MixCalendarPlugin;
 
@@ -64,7 +63,7 @@
 
   function scrollToCurrentQuarter() {
     if (!yearGridEl) return;
-    const today = window.moment();
+    const today = moment();
     const currentMonth = today.month() + 1;
     // Find which quarter contains the current month
     const quarterIdx = currentMonth <= 3 ? 0
@@ -110,7 +109,7 @@
     if (!date) return;
 
     const year = date.year();
-    const today = window.moment();
+    const today = moment();
 
     // Pre-compute daily aggregates for all months in this year (single pass)
     const dailyAggMap = buildDailyAggregates(year, dailyNotesData);
@@ -132,7 +131,7 @@
       const quarterlyTaskStats = quarterlyNoteData.taskStats[quarterUID] ?? null;
 
       for (const m of qDef.months) {
-        const monthDate = window.moment([year, m - 1, 1]);
+        const monthDate = moment([year, m - 1, 1]);
         const dateUID = monthDate.format("YYYY-MM");
         const hasNote = !!monthlyNoteData.notes[dateUID];
         const isPast = monthDate.endOf("month").isBefore(today, "day");
@@ -187,7 +186,7 @@
 
   function navigateToMonthView(month: number) {
     $viewMode = "month";
-    $currentDate = window.moment([$currentDate.year(), month - 1, 1]);
+    $currentDate = moment([$currentDate.year(), month - 1, 1]);
   }
 
   async function handleMonthClick(e: MouseEvent, mData: MonthData) {
@@ -201,7 +200,7 @@
     const useNewLeaf = isModPressed(e);
     const existing = monthlyNotes.get(mData.dateUID);
     if (existing) {
-      plugin.app.workspace.getLeaf(useNewLeaf ? "split" : false).openFile(existing);
+      await plugin.app.workspace.getLeaf(useNewLeaf ? "split" : false).openFile(existing);
       return;
     }
 
@@ -210,13 +209,13 @@
       const file = await createPeriodicNote(
         plugin.app, mData.refDate, "monthly", granSettings, plugin.settings.holidayOverrides
       );
-      if (file) plugin.app.workspace.getLeaf(useNewLeaf ? "split" : false).openFile(file);
+      if (file) await plugin.app.workspace.getLeaf(useNewLeaf ? "split" : false).openFile(file);
     };
 
     if (plugin.settings.shouldConfirmBeforeCreate) {
       new ConfirmCreateModal(plugin.app, notePath, "月记", doCreate).open();
     } else {
-      doCreate();
+      await doCreate();
     }
   }
 
@@ -225,7 +224,7 @@
     if (!existing) return;
 
     e.preventDefault();
-    showNoteContextMenu(e, plugin.app, existing, "monthly", mData.dateUID);
+    showNoteContextMenu(e, plugin.app, existing, "monthly");
   }
 
   async function handleYearClick() {
@@ -233,10 +232,10 @@
     if (!granSettings.enabled) return;
 
     const year = $currentDate.year();
-    const refDate = window.moment([year, 0, 1]);
+    const refDate = moment([year, 0, 1]);
     const existing = yearlyNotes.get(yearUID);
     if (existing) {
-      plugin.app.workspace.getLeaf(false).openFile(existing);
+      await plugin.app.workspace.getLeaf(false).openFile(existing);
       return;
     }
 
@@ -245,7 +244,7 @@
       const file = await createPeriodicNote(
         plugin.app, refDate, "yearly", granSettings, plugin.settings.holidayOverrides
       );
-      if (file) plugin.app.workspace.getLeaf(false).openFile(file);
+      if (file) await plugin.app.workspace.getLeaf(false).openFile(file);
     };
 
     new ConfirmCreateModal(plugin.app, notePath, "年记", doCreate).open();
@@ -255,10 +254,10 @@
     const granSettings = plugin.settings.quarterly;
     if (!granSettings.enabled) return;
 
-    const refDate = window.moment([$currentDate.year(), quarter.months[0].month - 1, 1]);
+    const refDate = moment([$currentDate.year(), quarter.months[0].month - 1, 1]);
     const existing = quarterlyNotes.get(quarter.quarterUID);
     if (existing) {
-      plugin.app.workspace.getLeaf(false).openFile(existing);
+      await plugin.app.workspace.getLeaf(false).openFile(existing);
       return;
     }
 
@@ -267,7 +266,7 @@
       const file = await createPeriodicNote(
         plugin.app, refDate, "quarterly", granSettings, plugin.settings.holidayOverrides
       );
-      if (file) plugin.app.workspace.getLeaf(false).openFile(file);
+      if (file) await plugin.app.workspace.getLeaf(false).openFile(file);
     };
 
     new ConfirmCreateModal(plugin.app, notePath, "季记", doCreate).open();
@@ -293,7 +292,7 @@
           {yearlyStats.completed}/{yearlyStats.total}
         </span>
       {:else if hasYearlyNote}
-        <span class="mix-calendar-dot" style="display:inline-block;margin-left:4px;"></span>
+        <span class="mix-calendar-dot dot-inline"></span>
       {/if}
     </div>
   {/if}
@@ -309,7 +308,7 @@
       >
         {quarter.label}
         {#if quarter.hasQuarterlyNote}
-          <span class="mix-calendar-dot" style="display:inline-block;margin-left:4px;"></span>
+          <span class="mix-calendar-dot dot-inline"></span>
         {/if}
       </div>
       <div class="mix-calendar-quarter-months">

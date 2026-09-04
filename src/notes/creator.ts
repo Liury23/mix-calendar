@@ -1,6 +1,5 @@
-import { App, TFile, normalizePath } from "obsidian";
-import type { Moment } from "moment";
-import type { PeriodicNoteSettings, Granularity } from "../types";
+import { type App, TFile } from "obsidian";
+import type { PeriodicNoteSettings, Granularity, Moment } from "../types";
 import { getLunarInfo } from "../lunar/converter";
 
 /**
@@ -86,8 +85,8 @@ async function buildNoteContent(
         ? settings.template
         : settings.template + ".md";
       const templateFile = app.vault.getAbstractFileByPath(templatePath);
-      if (templateFile) {
-        templateContent = await app.vault.read(templateFile as TFile);
+      if (templateFile instanceof TFile) {
+        templateContent = await app.vault.read(templateFile);
       } else {
         console.warn(
           `[Mix Calendar] Template not found: ${templatePath}`

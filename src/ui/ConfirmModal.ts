@@ -1,15 +1,15 @@
-import { App, Modal } from "obsidian";
+import { App, Modal, Setting } from "obsidian";
 
 export class ConfirmCreateModal extends Modal {
   private notePath: string;
   private noteType: string;
-  private onConfirm: () => void;
+  private onConfirm: () => unknown;
 
   constructor(
     app: App,
     notePath: string,
     noteType: string,
-    onConfirm: () => void
+    onConfirm: () => unknown
   ) {
     super(app);
     this.notePath = notePath;
@@ -21,16 +21,16 @@ export class ConfirmCreateModal extends Modal {
     const { contentEl } = this;
     contentEl.addClass("mix-calendar-confirm-modal");
 
-    contentEl.createEl("h3", { text: "创建笔记" });
+    new Setting(contentEl).setName("创建笔记").setHeading();
     contentEl.createEl("p", {
       text: `确认创建${this.noteType}：`,
     });
-    contentEl.createEl("div", {
+    contentEl.createDiv({
       cls: "path-preview",
       text: this.notePath,
     });
 
-    const buttonRow = contentEl.createEl("div", { cls: "button-row" });
+    const buttonRow = contentEl.createDiv({ cls: "button-row" });
 
     const cancelBtn = buttonRow.createEl("button", { text: "取消" });
     cancelBtn.onclick = () => this.close();
@@ -40,7 +40,9 @@ export class ConfirmCreateModal extends Modal {
       cls: "mod-cta",
     });
     confirmBtn.onclick = () => {
-      this.onConfirm();
+      void Promise.resolve(this.onConfirm()).catch((err: unknown) => {
+        console.warn("[Mix Calendar] Note creation failed:", err);
+      });
       this.close();
     };
   }

@@ -572,6 +572,23 @@
   align-items: center;
 }
 
+/* Custom holiday overrides */
+.mix-calendar-holiday-textarea {
+  width: 100%;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+}
+
+.mix-calendar-holiday-save {
+  margin-top: 8px;
+}
+
+/* Inline dot marker in year view labels */
+.mix-calendar-dot.dot-inline {
+  display: inline-block;
+  margin-left: 4px;
+}
+
 /* ============================
    Past Time Transparency
    ============================ */

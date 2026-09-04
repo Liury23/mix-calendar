@@ -1,12 +1,13 @@
-import { ItemView, WorkspaceLeaf } from "obsidian";
+import { ItemView, WorkspaceLeaf, moment } from "obsidian";
 import { get } from "svelte/store";
 import { VIEW_TYPE_MIX_CALENDAR } from "../constants";
 import type MixCalendarPlugin from "../main";
+import type App from "./App.svelte";
 import { currentDate, viewMode } from "./stores";
 
 export class CalendarView extends ItemView {
   plugin: MixCalendarPlugin;
-  private appComponent: any = null;
+  private appComponent: App | null = null;
   private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
 
   constructor(leaf: WorkspaceLeaf, plugin: MixCalendarPlugin) {
@@ -50,7 +51,7 @@ export class CalendarView extends ItemView {
 
     // Auto-focus the container so keyboard nav works immediately
     // (deferred so Svelte has finished rendering)
-    requestAnimationFrame(() => container.focus());
+    window.requestAnimationFrame(() => container.focus());
   }
 
   async onClose(): Promise<void> {
@@ -126,7 +127,7 @@ export class CalendarView extends ItemView {
 
       case "t":
       case "T":
-        currentDate.set(window.moment());
+        currentDate.set(moment());
         e.preventDefault();
         break;
 

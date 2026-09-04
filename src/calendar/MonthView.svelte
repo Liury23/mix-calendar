@@ -1,12 +1,11 @@
 <script lang="ts">
-  import type { Moment } from "moment";
-  import type { TFile } from "obsidian";
+  import { moment, type TFile } from "obsidian";
   import type MixCalendarPlugin from "../main";
   import DayCell from "./DayCell.svelte";
   import WeekNumCell from "./WeekNumCell.svelte";
   import { currentDate, weekStartDay, viewMode, showWeekNumbers, dailyNotes, weeklyNotes, settings, i18n, selectedDateUID } from "./stores";
   import { getLunarInfo } from "../lunar/converter";
-  import type { DayCellData, WeekRowData, TaskStats, IMixCalendarSettings } from "../types";
+  import type { DayCellData, WeekRowData, TaskStats, IMixCalendarSettings, Moment } from "../types";
 
   export let plugin: MixCalendarPlugin;
 
@@ -45,10 +44,10 @@
 
     const year = date.year();
     const month = date.month(); // 0-based
-    const today = window.moment().startOf("day");
+    const today = moment().startOf("day");
 
     // First day of the month
-    const firstOfMonth = window.moment([year, month, 1]);
+    const firstOfMonth = moment([year, month, 1]);
 
     // Calculate the start of the grid: first day of the week containing the 1st
     let gridStart = firstOfMonth.clone().day(wsd);

@@ -1,6 +1,11 @@
 import { App, Menu, TFile } from "obsidian";
 import type { Granularity } from "../types";
 
+/** Minimal shape of the internal file-explorer plugin used for "reveal in explorer". */
+interface FileExplorerPlugin {
+  revealInFolder?: (file: TFile) => void;
+}
+
 /**
  * Show a right-click context menu for a periodic note in the calendar view.
  * Provides "Delete Note" and "Reveal in File Explorer" options.
@@ -9,8 +14,7 @@ export function showNoteContextMenu(
   event: MouseEvent,
   app: App,
   file: TFile | null,
-  granularity: Granularity,
-  dateLabel: string
+  granularity: Granularity
 ): void {
   if (!file) return;
 
@@ -20,8 +24,12 @@ export function showNoteContextMenu(
     item
       .setTitle(`打开${getGranLabel(granularity)}`)
       .setIcon("file-text")
-      .onClick(() => {
-        app.workspace.getLeaf(false).openFile(file);
+      .onClick(async () => {
+        try {
+          await app.workspace.getLeaf(false).openFile(file);
+        } catch (err) {
+          console.warn("[Mix Calendar] Failed to open note:", err);
+        }
       });
   });
 
@@ -31,8 +39,10 @@ export function showNoteContextMenu(
       .setIcon("folder")
       .onClick(() => {
         // Reveal in file explorer
-        const fileExplorer =
-          (app as any).internalPlugins?.getPluginById?.("file-explorer");
+        const internalPlugins = (app as unknown as {
+          internalPlugins?: { getPluginById?: (id: string) => FileExplorerPlugin | null };
+        }).internalPlugins;
+        const fileExplorer = internalPlugins?.getPluginById?.("file-explorer");
         if (fileExplorer?.revealInFolder) {
           fileExplorer.revealInFolder(file);
         }
@@ -46,7 +56,11 @@ export function showNoteContextMenu(
       .setTitle("删除笔记")
       .setIcon("trash")
       .onClick(async () => {
-        await app.vault.trash(file, true);
+        try {
+          await app.fileManager.trashFile(file);
+        } catch (err) {
+          console.warn("[Mix Calendar] Failed to delete note:", err);
+        }
       });
   });
 

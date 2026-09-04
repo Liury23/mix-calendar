@@ -1,5 +1,7 @@
-import type { Moment } from "moment";
-import type { TFile } from "obsidian";
+import { moment } from "obsidian";
+
+/** The moment.js instance type as re-exported by Obsidian. */
+export type Moment = ReturnType<typeof moment>;
 
 /** Supported calendar view modes */
 export type ViewMode = "month" | "year";
@@ -77,14 +79,6 @@ export interface LunarInfo {
   lunarDayChinese: string;   // 农历日中文（如 "初一"）
 }
 
-/** Indexed note data for a specific granularity */
-export interface NoteIndex {
-  /** dateUID → TFile mapping. dateUID format depends on granularity */
-  notes: Record<string, TFile>;
-  /** Re-index all notes for this granularity */
-  reindex: () => Promise<void>;
-}
-
 /** Calendar day cell data for rendering */
 export interface DayCellData {
   date: Moment;
@@ -117,6 +111,6 @@ export interface WeekRowData {
   hasWeeklyNote: boolean;
   weeklyTaskStats?: TaskStats | null;
   weekUID: string;
-  weekDate: import("moment").Moment;
+  weekDate: Moment;
   days: DayCellData[];
 }
