@@ -12,11 +12,13 @@ export const DOW_ABBR = ["日", "一", "二", "三", "四", "五", "六"];
 /** Week day abbreviations in English */
 export const DOW_ABBR_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-/** Regex: match any checkbox with non-whitespace content (excludes empty "- [ ]" lines) */
-export const TASK_REGEX = /- \[[ xX]\]\s*\S/g;
+/** Regex: match any checkbox with non-whitespace content on the SAME line
+ *  (excludes empty "- [ ]" lines). [ \t] instead of \s so the match cannot
+ *  span a newline and pair an empty checkbox with the next line's text. */
+export const TASK_REGEX = /- \[[ xX]\][ \t]*\S/g;
 
-/** Regex: match completed checkbox with non-whitespace content */
-export const COMPLETED_TASK_REGEX = /- \[[xX]\]\s*\S/g;
+/** Regex: match completed checkbox with non-whitespace content on the SAME line */
+export const COMPLETED_TASK_REGEX = /- \[[xX]\][ \t]*\S/g;
 
 /** Default settings — matching current vault configuration */
 export const DEFAULT_SETTINGS: IMixCalendarSettings = {
